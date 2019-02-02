@@ -91,6 +91,7 @@ if __name__ == "__main__":
         cmd = CCmd(client)
         cmd.run_cmd('pwd')
         print(cmd.get_cmd_result())
+        client.close()
     except Exception as e:
         print(traceback.format_exc())
         if isinstance(e, CCMDError):
