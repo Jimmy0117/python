@@ -3,6 +3,13 @@
 
 import paramiko
 import sys
+import traceback
+
+
+class CCMDError(Exception):
+
+    def __ini__(self, msg=''):
+        self.msg = msg
 
 
 class CCmd(object):
@@ -17,6 +24,7 @@ class CCmd(object):
 
     def __exec_cmd(self, user_cmd):
         """
+        Blocks until command succeeds
         A new Channel is opened and the requested command is executed.
         :param user_cmd:
         :return:
@@ -26,9 +34,13 @@ class CCmd(object):
         try:
             stdin, stdout, stderr = self.cmd_client.exec_command(user_cmd)
             self.cmd_result = stdout.read()
+            exit_status = stdout.channel.recv_exit_status()
+            if exit_status != 0:
+                return False
         except paramiko.SSHException:
-            print('run cmd error')
-            sys.exit(1)
+            raise CCMDError('raise exec command')
+
+        return True
 
     def get_cmd_result(self):
         """
@@ -38,12 +50,14 @@ class CCmd(object):
 
         return 'exec cmd result:{}'.format(self.cmd_result)
 
-    def run_cmd(self, __cmd):
-        if len(__cmd):
-            self.__exec_cmd(__cmd)
+    def run_cmd(self, cmd_list):
+        if len(cmd_list):
+            if self.__exec_cmd(cmd_list):
+                print('run cmd success')
+            else:
+                print('run cmd fail')
         else:
-            print('cmd is empty')
-            sys.exit(1)
+            pass
 
     def add_cmd(self, cmd_cell):
         """
@@ -64,10 +78,23 @@ class CCmd(object):
         cmd_list = self.cmd_list[:-1]
         if len(cmd_list):
             self.run_cmd(cmd_list)
-        else:
-            print('cmd is empty')
-            sys.exit(1)
 
 
 if __name__ == "__main__":
-    pass
+
+    # from base.ssh import ssh_client
+    try:
+        ip = ''
+        usr = ''
+        password = '.'
+        client = ssh_client(ip, usr, password)
+        cmd = CCmd(client)
+        cmd.run_cmd('pwd')
+        print(cmd.get_cmd_result())
+    except Exception as e:
+        print(traceback.format_exc())
+        if isinstance(e, CCMDError):
+            print(e.msg)
+        else:
+            print('get exception')
+            sys.exit(1)
